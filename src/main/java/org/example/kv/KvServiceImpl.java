@@ -12,6 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     private final TarantoolBoxClient tarantoolBoxClient;
+    private final String spaceName;
 
     @Override
     public void put(PutRequest request, StreamObserver<PutResponse> responseObserver) {
@@ -19,7 +20,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             String key = request.getKey();
             byte[] value = request.hasValue() ? request.getValue().toByteArray() : null;
             List<?> tuple = Arrays.asList(key, value);
-            var puttedTuple = tarantoolBoxClient.space("KV").replace(tuple).join();
+            var puttedTuple = tarantoolBoxClient.space(spaceName).replace(tuple).join();
             boolean isPutted = puttedTuple != null && !puttedTuple.get().isEmpty();
             PutResponse success = PutResponse.newBuilder().setSuccess(isPutted).build();
             responseObserver.onNext(success);
@@ -33,7 +34,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     public void get(GetRequest request, StreamObserver<GetResponse> responseObserver) {
         try {
             String key = request.getKey();
-            var tarantoolResponse = tarantoolBoxClient.space("KV").select(List.of(key)).join();
+            var tarantoolResponse = tarantoolBoxClient.space(spaceName).select(List.of(key)).join();
             if (tarantoolResponse.get().isEmpty()) responseObserver.onError(Status.NOT_FOUND.asException());
             else {
                 var value = tarantoolResponse.get().getFirst().get().get(1);
@@ -51,7 +52,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     public void delete(DeleteRequest request, StreamObserver<DeleteResponse> responseObserver) {
         try {
             String key = request.getKey();
-            var deletedTuple = tarantoolBoxClient.space("KV").delete(List.of(key)).join();
+            var deletedTuple = tarantoolBoxClient.space(spaceName).delete(List.of(key)).join();
             boolean isDeleted = deletedTuple != null && !deletedTuple.get().isEmpty();
             DeleteResponse response = DeleteResponse.newBuilder().setSuccess(isDeleted).build();
             responseObserver.onNext(response);
@@ -66,17 +67,17 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
         try {
             String key_since = request.getKeySince();
             String key_to = request.getKeyTo();
-            String luaScript = """
+            String luaScript = String.format("""
                         local key_since, key_to = ...
                         local result = {}
-                        for _, tuple in box.space.KV:pairs({key_since}, {iterator = 'GE'}) do
+                        for _, tuple in box.space.%s:pairs({key_since}, {iterator = 'GE'}) do
                             if tuple[1] > key_to then
                                 break
                             end
                             table.insert(result, tuple)
                         end
                         return result
-                    """;
+                    """, spaceName);
 
             var tarantoolResponse = tarantoolBoxClient.eval(luaScript, Arrays.asList(key_since, key_to)).join();
             List<?> tuples = (List<?>) tarantoolResponse.get().getFirst();
@@ -97,7 +98,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     @Override
     public void count(Empty request, StreamObserver<CountResponse> responseObserver) {
         try {
-            var tarantoolResponse = tarantoolBoxClient.eval("return box.space.KV:len()").join();
+            var tarantoolResponse = tarantoolBoxClient.eval("return box.space." + spaceName + ":len()").join();
             long count = ((Number) tarantoolResponse.get().getFirst()).longValue();
             CountResponse response = CountResponse.newBuilder().setCount(count).build();
             responseObserver.onNext(response);
