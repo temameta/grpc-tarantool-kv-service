@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.kv.KvServiceImpl;
 
 @Slf4j
-public class Main {
+public class KvServer {
     private final static String SPACE_NAME = "KV";
     private final static String TARANTOOL_HOST = "127.0.0.1";
     private final static int TARANTOOL_PORT = 3301;
