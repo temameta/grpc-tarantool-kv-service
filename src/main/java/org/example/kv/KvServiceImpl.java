@@ -19,6 +19,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     @Override
     public void put(PutRequest request, StreamObserver<PutResponse> responseObserver) {
         String key = request.getKey();
+        log.debug("Put request was received for key {}", key);
         try {
             byte[] value = request.hasValue() ? request.getValue().toByteArray() : null;
             List<?> tuple = Arrays.asList(key, value);
@@ -36,9 +37,13 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     @Override
     public void get(GetRequest request, StreamObserver<GetResponse> responseObserver) {
         String key = request.getKey();
+        log.debug("Get request was received for key {}", key);
         try {
             var tarantoolResponse = tarantoolBoxClient.space(spaceName).select(List.of(key)).join();
-            if (tarantoolResponse.get().isEmpty()) responseObserver.onError(Status.NOT_FOUND.asException());
+            if (tarantoolResponse.get().isEmpty()) {
+                log.warn("Key {} is not found", key);
+                responseObserver.onError(Status.NOT_FOUND.asException());
+            }
             else {
                 var value = tarantoolResponse.get().getFirst().get().get(1);
                 GetResponse.Builder response = GetResponse.newBuilder();
@@ -55,6 +60,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     @Override
     public void delete(DeleteRequest request, StreamObserver<DeleteResponse> responseObserver) {
         String key = request.getKey();
+        log.debug("Delete request was received for key {}", key);
         try {
             var deletedTuple = tarantoolBoxClient.space(spaceName).delete(List.of(key)).join();
             boolean isDeleted = deletedTuple != null && !deletedTuple.get().isEmpty();
@@ -71,6 +77,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     public void range(RangeRequest request, StreamObserver<KeyValuePair> responseObserver) {
         String key_since = request.getKeySince();
         String key_to = request.getKeyTo();
+        log.debug("Range request was received for range of keys [{}, {}]", key_since, key_to);
         try {
             String luaScript = String.format("""
                         local key_since, key_to = ...
@@ -103,6 +110,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
 
     @Override
     public void count(Empty request, StreamObserver<CountResponse> responseObserver) {
+        log.debug("Count request was received for key");
         try {
             var tarantoolResponse = tarantoolBoxClient.eval("return box.space." + spaceName + ":len()").join();
             long count = ((Number) tarantoolResponse.get().getFirst()).longValue();
