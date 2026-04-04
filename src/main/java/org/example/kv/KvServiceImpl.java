@@ -29,7 +29,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             responseObserver.onNext(success);
             responseObserver.onCompleted();
         } catch (Exception e) {
-            log.error("Error while executing put for key {}", key, e);
+            log.error("Error while executing put for key {} in space {}", key, spaceName, e);
             responseObserver.onError(e);
         }
     }
@@ -52,7 +52,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
                 responseObserver.onCompleted();
             }
         } catch (Exception e) {
-            log.error("Error while executing get for key {}", key, e);
+            log.error("Error while executing get for key {} in space {}", key, spaceName, e);
             responseObserver.onError(e);
         }
     }
@@ -68,7 +68,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
-            log.error("Error while executing delete for key {}", key, e);
+            log.error("Error while executing delete for key {} in space {}", key, spaceName, e);
             responseObserver.onError(e);
         }
     }
@@ -103,7 +103,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             }
             responseObserver.onCompleted();
         } catch (Exception e) {
-            log.error("Error while executing range for range of keys [{}, {}]", key_since, key_to, e);
+            log.error("Error while executing range for range of keys [{}, {}] in space {}", key_since, key_to, spaceName, e);
             responseObserver.onError(e);
         }
     }
@@ -118,7 +118,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
-            log.error("Error while executing count", e);
+            log.error("Error while executing count in space {}", spaceName, e);
             responseObserver.onError(e);
         }
     }
