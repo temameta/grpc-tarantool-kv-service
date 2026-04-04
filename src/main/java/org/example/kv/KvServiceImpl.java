@@ -4,17 +4,21 @@ import com.google.protobuf.ByteString;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.tarantool.client.box.TarantoolBoxClient;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
-@RequiredArgsConstructor
 public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     private final TarantoolBoxClient tarantoolBoxClient;
     private final String spaceName;
+
+    public KvServiceImpl(TarantoolBoxClient tarantoolBoxClient, String spaceName) {
+        this.tarantoolBoxClient = tarantoolBoxClient;
+        this.spaceName = spaceName;
+        log.info("KvServiceImpl initialized with space name {}", spaceName);
+    }
 
     @Override
     public void put(PutRequest request, StreamObserver<PutResponse> responseObserver) {
