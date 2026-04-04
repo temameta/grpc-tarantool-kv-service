@@ -5,10 +5,12 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.tarantool.client.box.TarantoolBoxClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 @RequiredArgsConstructor
 public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
     private final TarantoolBoxClient tarantoolBoxClient;
@@ -16,8 +18,8 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
 
     @Override
     public void put(PutRequest request, StreamObserver<PutResponse> responseObserver) {
+        String key = request.getKey();
         try {
-            String key = request.getKey();
             byte[] value = request.hasValue() ? request.getValue().toByteArray() : null;
             List<?> tuple = Arrays.asList(key, value);
             var puttedTuple = tarantoolBoxClient.space(spaceName).replace(tuple).join();
@@ -26,14 +28,15 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             responseObserver.onNext(success);
             responseObserver.onCompleted();
         } catch (Exception e) {
+            log.error("Error while executing put for key {}", key, e);
             responseObserver.onError(e);
         }
     }
 
     @Override
     public void get(GetRequest request, StreamObserver<GetResponse> responseObserver) {
+        String key = request.getKey();
         try {
-            String key = request.getKey();
             var tarantoolResponse = tarantoolBoxClient.space(spaceName).select(List.of(key)).join();
             if (tarantoolResponse.get().isEmpty()) responseObserver.onError(Status.NOT_FOUND.asException());
             else {
@@ -44,29 +47,31 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
                 responseObserver.onCompleted();
             }
         } catch (Exception e) {
+            log.error("Error while executing get for key {}", key, e);
             responseObserver.onError(e);
         }
     }
 
     @Override
     public void delete(DeleteRequest request, StreamObserver<DeleteResponse> responseObserver) {
+        String key = request.getKey();
         try {
-            String key = request.getKey();
             var deletedTuple = tarantoolBoxClient.space(spaceName).delete(List.of(key)).join();
             boolean isDeleted = deletedTuple != null && !deletedTuple.get().isEmpty();
             DeleteResponse response = DeleteResponse.newBuilder().setSuccess(isDeleted).build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
+            log.error("Error while executing delete for key {}", key, e);
             responseObserver.onError(e);
         }
     }
 
     @Override
     public void range(RangeRequest request, StreamObserver<KeyValuePair> responseObserver) {
+        String key_since = request.getKeySince();
+        String key_to = request.getKeyTo();
         try {
-            String key_since = request.getKeySince();
-            String key_to = request.getKeyTo();
             String luaScript = String.format("""
                         local key_since, key_to = ...
                         local result = {}
@@ -91,6 +96,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             }
             responseObserver.onCompleted();
         } catch (Exception e) {
+            log.error("Error while executing range for range of keys [{}, {}]", key_since, key_to, e);
             responseObserver.onError(e);
         }
     }
@@ -104,6 +110,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
+            log.error("Error while executing count", e);
             responseObserver.onError(e);
         }
     }
