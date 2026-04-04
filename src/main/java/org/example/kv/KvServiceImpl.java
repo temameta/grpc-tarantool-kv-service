@@ -20,7 +20,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
             byte[] value = request.hasValue() ? request.getValue().toByteArray() : null;
             List<?> tuple = Arrays.asList(key, value);
             var puttedTuple = tarantoolBoxClient.space("KV").replace(tuple).join();
-            boolean isPutted = puttedTuple.get() != null && !puttedTuple.get().isEmpty();
+            boolean isPutted = puttedTuple != null && !puttedTuple.get().isEmpty();
             PutResponse success = PutResponse.newBuilder().setSuccess(isPutted).build();
             responseObserver.onNext(success);
             responseObserver.onCompleted();
@@ -52,7 +52,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
         try {
             String key = request.getKey();
             var deletedTuple = tarantoolBoxClient.space("KV").delete(List.of(key)).join();
-            boolean isDeleted = deletedTuple.get() != null && !deletedTuple.get().isEmpty();
+            boolean isDeleted = deletedTuple != null && !deletedTuple.get().isEmpty();
             DeleteResponse response = DeleteResponse.newBuilder().setSuccess(isDeleted).build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
@@ -66,7 +66,18 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
         try {
             String key_since = request.getKeySince();
             String key_to = request.getKeyTo();
-            String luaScript = "local key_since, key_to = ... \n" + "local result = {} \n" + "for _, tuple in box.space.KV:pairs({key_since}, {iterator = 'GE'}) do \n" + "    if tuple[1] > key_to then \n" + "        break \n" + "    end \n" + "    table.insert(result, tuple) \n" + "end \n" + "return result";
+            String luaScript = """
+                        local key_since, key_to = ...
+                        local result = {}
+                        for _, tuple in box.space.KV:pairs({key_since}, {iterator = 'GE'}) do
+                            if tuple[1] > key_to then
+                                break
+                            end
+                            table.insert(result, tuple)
+                        end
+                        return result
+                    """;
+
             var tarantoolResponse = tarantoolBoxClient.eval(luaScript, Arrays.asList(key_since, key_to)).join();
             List<?> tuples = (List<?>) tarantoolResponse.get().getFirst();
             for (Object obj : tuples) {
