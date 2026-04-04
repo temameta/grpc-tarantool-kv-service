@@ -110,7 +110,7 @@ public class KvServiceImpl extends KvServiceGrpc.KvServiceImplBase {
 
     @Override
     public void count(Empty request, StreamObserver<CountResponse> responseObserver) {
-        log.debug("Count request was received for key");
+        log.debug("Count request was received");
         try {
             var tarantoolResponse = tarantoolBoxClient.eval("return box.space." + spaceName + ":len()").join();
             long count = ((Number) tarantoolResponse.get().getFirst()).longValue();
