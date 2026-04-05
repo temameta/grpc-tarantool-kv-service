@@ -9,10 +9,10 @@ import org.example.kv.KvServiceImpl;
 
 @Slf4j
 public class KvServer {
-    private final static String SPACE_NAME = "KV";
-    private final static String TARANTOOL_HOST = "127.0.0.1";
-    private final static int TARANTOOL_PORT = 3301;
-    private final static int GRPC_PORT = 9090;
+    private final static String SPACE_NAME = System.getenv().getOrDefault("SPACE_NAME", "KV");
+    private final static String TARANTOOL_HOST = System.getenv().getOrDefault("TARANTOOL_HOST", "127.0.0.1");
+    private final static int TARANTOOL_PORT = Integer.parseInt(System.getenv().getOrDefault("TARANTOOL_PORT", "3301"));
+    private final static int GRPC_PORT = Integer.parseInt(System.getenv().getOrDefault("GRPC_PORT", "9090"));
     public static void main(String[] args) {
         log.info("Starting application");
         log.info("Connecting to Tarantool on {}:{}", TARANTOOL_HOST, TARANTOOL_PORT);
